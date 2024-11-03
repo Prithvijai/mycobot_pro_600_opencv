@@ -1,0 +1,25 @@
+moveit_setup_assistant_config:
+  urdf:
+    package: mycobot_pro_600_desp
+    relative_path: urdf/mycobot_pro_600.urdf
+  srdf:
+    relative_path: config/mycobot_600.srdf
+  package_settings:
+    author_name: Prithvijai
+    author_email: prithvijai0510@gmail.com
+    generated_timestamp: 1730080073
+  control_xacro:
+    command:
+      - position
+    state:
+      - position
+      - velocity
+  modified_urdf:
+    xacros:
+      - control_xacro
+  control_xacro:
+    command:
+      - position
+    state:
+      - position
+      - velocity
