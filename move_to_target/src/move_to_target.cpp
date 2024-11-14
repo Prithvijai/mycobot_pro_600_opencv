@@ -23,7 +23,7 @@ int main(int argc, char *argv[])
     std::cout << "Enter coordinates for Position A (x y z): ";
     std::cin >> target_pose_a.position.x >> target_pose_a.position.y >> target_pose_a.position.z;
 
-    std::cout << "Enter coordinates for Position B (x y z): ";
+    std::cout << "Enter coordinates for Position B (x y z ): ";
     std::cin >> target_pose_b.position.x >> target_pose_b.position.y >> target_pose_b.position.z;
 
     // Define MoveGroup interface for controlling the robot
@@ -76,7 +76,7 @@ int main(int argc, char *argv[])
 
     // Plan a Cartesian path
     moveit_msgs::msg::RobotTrajectory trajectory;
-    const double eef_step = 0.02;
+    const double eef_step = 0.02;                                             
     const double jump_threshold = 0.0;
     double fraction = move_group_interface.computeCartesianPath(waypoints, eef_step, jump_threshold, trajectory);
 
