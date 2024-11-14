@@ -130,6 +130,24 @@
     </collision>
   </link>
 
+  <link name="env_world">
+    <visual>
+      <geometry>
+        <!--- 0.0 0 -0.04  1.5708 3.14159-->
+        <mesh filename="package://mycobot_pro_600_desp/urdf/suit_env_v2.dae"/>
+      </geometry>
+      <!-- <origin xyz = "0 0 -0.02 " rpy = "1.5708 0 -1.5708"/> -->
+      <origin xyz = "0.16 0 0.0 " rpy = "0 0 3.14159"/>
+    </visual>
+  </link>
+
+  <joint name="env_world_fixed_joint" type="fixed">
+    <parent link="base"/>
+    <child link="env_world"/>
+    <origin xyz="0.3 0.2 0" rpy="0 0 0"/> <!-- Adjust position as needed -->
+  </joint>
+  
+
 
 
     <joint name="joint2_to_joint1" type="revolute">
