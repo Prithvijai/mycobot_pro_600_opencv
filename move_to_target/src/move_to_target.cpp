@@ -2,181 +2,99 @@
 #include <iostream>
 #include <rclcpp/rclcpp.hpp>
 #include <moveit/move_group_interface/move_group_interface.h>
-#include <tf2/LinearMath/Quaternion.h>
-#include <geometry_msgs/msg/pose.hpp>
+#include <geometry_msgs/msg/pose_stamped.hpp>
+#include <moveit_msgs/msg/constraints.hpp>
+#include <moveit_msgs/msg/orientation_constraint.hpp>
 
-int main(int argc, char * argv[])
+int main(int argc, char *argv[])
 {
-  // Initialize ROS and create the Node
-  rclcpp::init(argc, argv);
-  auto const node = std::make_shared<rclcpp::Node>(
-    "hello_moveit_ik",
-    rclcpp::NodeOptions().automatically_declare_parameters_from_overrides(true)
-  );
+    // Initialize ROS and create the Node
+    rclcpp::init(argc, argv);
+    auto const node = std::make_shared<rclcpp::Node>(
+        "robot_cartesian_planner",
+        rclcpp::NodeOptions().automatically_declare_parameters_from_overrides(true)
+    );
 
-  // Create a ROS logger
-  auto const logger = rclcpp::get_logger("hello_moveit_ik");
+    auto const logger = rclcpp::get_logger("robot_cartesian_planner");
 
-  // Create the MoveIt MoveGroup Interface
-  using moveit::planning_interface::MoveGroupInterface;
-  auto move_group_interface = MoveGroupInterface(node, "cobot_arm");
+    // Get user input for positions A and B, including orientations
+    geometry_msgs::msg::Pose target_pose_a, target_pose_b;
 
-  // Function to set target pose with quaternion orientation
-  auto setTargetPose = [](double x, double y, double z, double roll, double pitch, double yaw) {
-    geometry_msgs::msg::Pose msg;
-    
-    // Create a quaternion from roll, pitch, yaw
-    tf2::Quaternion q;
-    q.setRPY(roll, pitch, yaw);  // Set rotation around x (roll), y (pitch), z (yaw)
-    msg.orientation.x = q.x();
-    msg.orientation.y = q.y();
-    msg.orientation.z = q.z();
-    msg.orientation.w = q.w();
-    
-    msg.position.x = x;
-    msg.position.y = y;
-    msg.position.z = z;
-    
-    return msg;
-  };
+    std::cout << "Enter coordinates for Position A (x y z): ";
+    std::cin >> target_pose_a.position.x >> target_pose_a.position.y >> target_pose_a.position.z;
 
-  // Function to move to a target pose using IK
-  auto moveToPoseUsingIK = [&move_group_interface, &logger](const geometry_msgs::msg::Pose& target_pose) {
-    move_group_interface.setPoseTarget(target_pose);
+    std::cout << "Enter coordinates for Position B (x y z): ";
+    std::cin >> target_pose_b.position.x >> target_pose_b.position.y >> target_pose_b.position.z;
 
-    // Check if IK is successful and get joint solution
-    moveit::planning_interface::MoveGroupInterface::Plan plan;
-    bool success = (move_group_interface.plan(plan) == moveit::planning_interface::MoveItErrorCode::SUCCESS);
-    
-    if (success) {
-      RCLCPP_INFO(logger, "IK Solution found, planning trajectory...");
-      move_group_interface.execute(plan);
-    } else {
-      RCLCPP_ERROR(logger, "IK solution failed!");
+    // Define MoveGroup interface for controlling the robot
+    using moveit::planning_interface::MoveGroupInterface;
+    auto move_group_interface = MoveGroupInterface(node, "cobot_arm");
+
+    // Ensure the robot's state is available before moving
+    rclcpp::sleep_for(std::chrono::seconds(1));  // Wait for joint states to be published
+
+    // Fetch the current robot state (including orientation)
+    auto current_state = move_group_interface.getCurrentState();
+    if (!current_state) {
+        RCLCPP_ERROR(logger, "Failed to fetch the current robot state.");
+        return 1;
     }
-  };
 
-  // Prompt user for Position A (First target pose)
-  double x_a, y_a, z_a, roll_a, pitch_a, yaw_a;
-  std::cout << "Enter Position A (x, y, z, roll, pitch, yaw): ";
-  std::cin >> x_a >> y_a >> z_a >> roll_a >> pitch_a >> yaw_a;
-  auto target_pose_A = setTargetPose(x_a, y_a, z_a, roll_a, pitch_a, yaw_a);
+    // Use the current orientation as the target orientation (the robot's initial state)
+    target_pose_a.orientation = current_state->getGlobalLinkTransform("link6").rotation(); // Assuming "link6" is the end-effector
 
-  // Move to Position A using IK
-  moveToPoseUsingIK(target_pose_A);
+    // Move to initial position (Point A)
+    move_group_interface.setPoseTarget(target_pose_a);
+    moveit::planning_interface::MoveGroupInterface::Plan initial_plan;
 
-  // Prompt user for Position B (Second target pose)
-  double x_b, y_b, z_b, roll_b, pitch_b, yaw_b;
-  std::cout << "Enter Position B (x, y, z, roll, pitch, yaw): ";
-  std::cin >> x_b >> y_b >> z_b >> roll_b >> pitch_b >> yaw_b;
-  auto target_pose_B = setTargetPose(x_b, y_b, z_b, roll_b, pitch_b, yaw_b);
+    // Set a longer planning time (10 seconds)
+    move_group_interface.setPlanningTime(10.0);
+    bool success = (move_group_interface.plan(initial_plan) == moveit::planning_interface::MoveItErrorCode::SUCCESS);
 
-  // Move to Position B using IK
-  moveToPoseUsingIK(target_pose_B);
+    if (success) {
+        move_group_interface.move();
+        std::cout << "Moved to Position A successfully.\n";
+    } else {
+        RCLCPP_ERROR(logger, "Failed to move to initial pose A.");
+        return 1;
+    }
 
-  // Shutdown ROS
-  rclcpp::shutdown();
-  return 0;
+    // Define waypoints for linear interpolation between A and B
+    std::vector<geometry_msgs::msg::Pose> waypoints;
+    int num_waypoints = 5;
+    for (int i = 0; i <= num_waypoints; ++i) {
+        geometry_msgs::msg::Pose waypoint;
+        waypoint.position.x = target_pose_a.position.x + i * (target_pose_b.position.x - target_pose_a.position.x) / num_waypoints;
+        waypoint.position.y = target_pose_a.position.y + i * (target_pose_b.position.y - target_pose_a.position.y) / num_waypoints;
+        waypoint.position.z = target_pose_a.position.z + i * (target_pose_b.position.z - target_pose_a.position.z) / num_waypoints;
+
+        // Keep the orientation constant as it is at Position A
+        waypoint.orientation = target_pose_a.orientation;
+
+        waypoints.push_back(waypoint);
+    }
+
+    // Plan a Cartesian path
+    moveit_msgs::msg::RobotTrajectory trajectory;
+    const double eef_step = 0.02;
+    const double jump_threshold = 0.0;
+    double fraction = move_group_interface.computeCartesianPath(waypoints, eef_step, jump_threshold, trajectory);
+
+    // Execute the Cartesian path if planning is successful
+    if (fraction > 0.95) {
+        std::cout << "Executing Cartesian path to target pose B...\n";
+        moveit::planning_interface::MoveGroupInterface::Plan cartesian_plan;
+        cartesian_plan.trajectory_ = trajectory;
+        move_group_interface.execute(cartesian_plan);
+        std::cout << "Successfully moved to Position B.\n";
+    } else {
+        RCLCPP_ERROR(logger, "Failed to compute Cartesian path.");
+    }
+
+    // Clear path constraints after motion
+    move_group_interface.clearPathConstraints();
+
+    // Shutdown ROS
+    rclcpp::shutdown();
+    return 0;
 }
-
-
-
-
-
-// #include <memory>
-// #include <iostream>
-// #include <rclcpp/rclcpp.hpp>
-// #include <moveit/move_group_interface/move_group_interface.h>
-// #include <tf2/LinearMath/Quaternion.h>
-
-// int main(int argc, char * argv[])
-// {
-//   // Initialize ROS and create the Node
-//   rclcpp::init(argc, argv);
-//   auto const node = std::make_shared<rclcpp::Node>(
-//     "hello_moveit",
-//     rclcpp::NodeOptions().automatically_declare_parameters_from_overrides(true)
-//   );
-
-//   // Create a ROS logger
-//   auto const logger = rclcpp::get_logger("hello_moveit");
-
-//   // Create the MoveIt MoveGroup Interface
-//   using moveit::planning_interface::MoveGroupInterface;
-//   auto move_group_interface = MoveGroupInterface(node, "cobot_arm");
-
-//   // Function to set target pose with quaternion orientation
-//   auto setTargetPose = [](double x, double y, double z, double roll, double pitch, double yaw) {
-//     geometry_msgs::msg::Pose msg;
-    
-//     // Create a quaternion from roll, pitch, yaw
-//     tf2::Quaternion q;
-//     q.setRPY(roll, pitch, yaw);  // Set rotation around x (roll), y (pitch), z (yaw)
-//     msg.orientation.x = q.x();
-//     msg.orientation.y = q.y();
-//     msg.orientation.z = q.z();
-//     msg.orientation.w = q.w();
-    
-//     msg.position.x = x;
-//     msg.position.y = y;
-//     msg.position.z = z;
-    
-//     return msg;
-//   };
-
-//   // Prompt user for Position A (First target pose)
-//   double x_a, y_a, z_a, roll_a, pitch_a, yaw_a;
-//   std::cout << "Enter Position A (x, y, z, roll, pitch, yaw): ";
-//   std::cin >> x_a >> y_a >> z_a >> roll_a >> pitch_a >> yaw_a;
-//   auto target_pose_A = setTargetPose(x_a, y_a, z_a, roll_a, pitch_a, yaw_a);
-
-//   // Set target pose for Position A
-//   move_group_interface.setPoseTarget(target_pose_A);
-
-//   // Plan and execute movement to Position A
-//   auto const [success_A, plan_A] = [&move_group_interface] {
-//     moveit::planning_interface::MoveGroupInterface::Plan msg;
-//     auto const ok = static_cast<bool>(move_group_interface.plan(msg));
-//     return std::make_pair(ok, msg);
-//   }();
-
-//   if (success_A) {
-//     RCLCPP_INFO(logger, "Moving to Position A...");
-//     move_group_interface.execute(plan_A);
-//   } else {
-//     RCLCPP_ERROR(logger, "Planning failed for Position A!");
-//     return 1; // Exit if planning failed for Position A
-//   }
-
-//   // Prompt user for Position B (Second target pose)
-//   double x_b, y_b, z_b, roll_b, pitch_b, yaw_b;
-//   std::cout << "Enter Position B (x, y, z, roll, pitch, yaw): ";
-//   std::cin >> x_b >> y_b >> z_b >> roll_b >> pitch_b >> yaw_b;
-//   auto target_pose_B = setTargetPose(x_b, y_b, z_b, roll_b, pitch_b, yaw_b);
-
-//   // Set target pose for Position B
-//   move_group_interface.setPoseTarget(target_pose_B);
-
-//   // Plan and execute movement to Position B
-//   auto const [success_B, plan_B] = [&move_group_interface] {
-//     moveit::planning_interface::MoveGroupInterface::Plan msg;
-//     auto const ok = static_cast<bool>(move_group_interface.plan(msg));
-//     return std::make_pair(ok, msg);
-//   }();
-
-//   if (success_B) {
-//     RCLCPP_INFO(logger, "Moving to Position B...");
-//     move_group_interface.execute(plan_B);
-//   } else {
-//     RCLCPP_ERROR(logger, "Planning failed for Position B!");
-//     return 1; // Exit if planning failed for Position B
-//   }
-
-//   // Shutdown ROS
-//   rclcpp::shutdown();
-//   return 0;
-// }
-
-
-
-
