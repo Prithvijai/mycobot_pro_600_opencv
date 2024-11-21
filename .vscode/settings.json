@@ -7,5 +7,9 @@
     "python.analysis.extraPaths": [
         "/opt/ros/humble/lib/python3.10/site-packages",
         "/opt/ros/humble/local/lib/python3.10/dist-packages"
-    ]
+    ],
+    "files.associations": {
+        "chrono": "cpp"
+    },
+    "cmake.sourceDirectory": "/home/rakshith/mycobot_pro_600_opencv/src/move_to_target"
 }

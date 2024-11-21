@@ -3,96 +3,73 @@
 #include <rclcpp/rclcpp.hpp>
 #include <moveit/move_group_interface/move_group_interface.h>
 #include <geometry_msgs/msg/pose_stamped.hpp>
-#include <moveit_msgs/msg/constraints.hpp>
-#include <moveit_msgs/msg/orientation_constraint.hpp>
+#include <chrono>  // For sleep functionality
 
 int main(int argc, char *argv[])
 {
     // Initialize ROS and create the Node
     rclcpp::init(argc, argv);
     auto const node = std::make_shared<rclcpp::Node>(
-        "robot_cartesian_planner",
+        "robot_direct_planner",
         rclcpp::NodeOptions().automatically_declare_parameters_from_overrides(true)
     );
 
-    auto const logger = rclcpp::get_logger("robot_cartesian_planner");
-
-    // Get user input for positions A and B, including orientations
-    geometry_msgs::msg::Pose target_pose_a, target_pose_b;
-
-    std::cout << "Enter coordinates for Position A (x y z): ";
-    std::cin >> target_pose_a.position.x >> target_pose_a.position.y >> target_pose_a.position.z;
-
-    std::cout << "Enter coordinates for Position B (x y z): ";
-    std::cin >> target_pose_b.position.x >> target_pose_b.position.y >> target_pose_b.position.z;
+    auto const logger = rclcpp::get_logger("robot_direct_planner");
 
     // Define MoveGroup interface for controlling the robot
     using moveit::planning_interface::MoveGroupInterface;
     auto move_group_interface = MoveGroupInterface(node, "cobot_arm");
+    move_group_interface.setStartStateToCurrentState();
 
-    // Ensure the robot's state is available before moving
-    rclcpp::sleep_for(std::chrono::seconds(1));  // Wait for joint states to be published
+    // Wait for the robot to be ready and set the planning time
+    move_group_interface.setPlanningTime(20.0);
 
-    // Fetch the current robot state (including orientation)
-    auto current_state = move_group_interface.getCurrentState();
-    if (!current_state) {
-        RCLCPP_ERROR(logger, "Failed to fetch the current robot state.");
-        return 1;
-    }
+    // Set Position A based on user input
+    geometry_msgs::msg::Pose target_pose_a;
+    std::cout << "Enter coordinates for Position A (x y z Orientation x y z w): ";
+    std::cin >> target_pose_a.position.x >> target_pose_a.position.y >> target_pose_a.position.z
+             >> target_pose_a.orientation.x >> target_pose_a.orientation.y >> target_pose_a.orientation.z >> target_pose_a.orientation.w;
 
-    // Use the current orientation as the target orientation (the robot's initial state)
-    target_pose_a.orientation = current_state->getGlobalLinkTransform("link6").rotation(); // Assuming "link6" is the end-effector
-
-    // Move to initial position (Point A)
+    // Move to Position A
     move_group_interface.setPoseTarget(target_pose_a);
-    moveit::planning_interface::MoveGroupInterface::Plan initial_plan;
-
-    // Set a longer planning time (10 seconds)
-    move_group_interface.setPlanningTime(10.0);
-    bool success = (move_group_interface.plan(initial_plan) == moveit::planning_interface::MoveItErrorCode::SUCCESS);
-
-    if (success) {
+    moveit::planning_interface::MoveGroupInterface::Plan plan_to_a;
+    bool success_a = (move_group_interface.plan(plan_to_a) == moveit::planning_interface::MoveItErrorCode::SUCCESS);
+    if (success_a) {
         move_group_interface.move();
         std::cout << "Moved to Position A successfully.\n";
     } else {
-        RCLCPP_ERROR(logger, "Failed to move to initial pose A.");
+        RCLCPP_ERROR(logger, "Failed to move to Position A.");
         return 1;
     }
 
-    // Define waypoints for linear interpolation between A and B
-    std::vector<geometry_msgs::msg::Pose> waypoints;
-    int num_waypoints = 5;
-    for (int i = 0; i <= num_waypoints; ++i) {
-        geometry_msgs::msg::Pose waypoint;
-        waypoint.position.x = target_pose_a.position.x + i * (target_pose_b.position.x - target_pose_a.position.x) / num_waypoints;
-        waypoint.position.y = target_pose_a.position.y + i * (target_pose_b.position.y - target_pose_a.position.y) / num_waypoints;
-        waypoint.position.z = target_pose_a.position.z + i * (target_pose_b.position.z - target_pose_a.position.z) / num_waypoints;
-
-        // Keep the orientation constant as it is at Position A
-        waypoint.orientation = target_pose_a.orientation;
-
-        waypoints.push_back(waypoint);
+    // Wait for a few seconds at Position A
+    std::cout << "Waiting for 5 seconds at Position A...\n";
+    auto joint_values = move_group_interface.getCurrentJointValues();
+    std::cout << "Current Joint Values: ";
+    //Printing joint values of the Robot at Position A
+    for (const auto &value : joint_values) {
+        std::cout << value << " ";
     }
+std::cout << std::endl;
+    rclcpp::sleep_for(std::chrono::seconds(5));  // Sleep for 5 seconds
 
-    // Plan a Cartesian path
-    moveit_msgs::msg::RobotTrajectory trajectory;
-    const double eef_step = 0.02;
-    const double jump_threshold = 0.0;
-    double fraction = move_group_interface.computeCartesianPath(waypoints, eef_step, jump_threshold, trajectory);
+    // Set Position B based on user input
+    geometry_msgs::msg::Pose target_pose_b;
+    std::cout << "Enter coordinates for Position B (x y z Orientation x y z w): ";
+    std::cin >> target_pose_b.position.x >> target_pose_b.position.y >> target_pose_b.position.z
+             >> target_pose_b.orientation.x >> target_pose_b.orientation.y >> target_pose_b.orientation.z >> target_pose_b.orientation.w;
 
-    // Execute the Cartesian path if planning is successful
-    if (fraction > 0.95) {
-        std::cout << "Executing Cartesian path to target pose B...\n";
-        moveit::planning_interface::MoveGroupInterface::Plan cartesian_plan;
-        cartesian_plan.trajectory_ = trajectory;
-        move_group_interface.execute(cartesian_plan);
-        std::cout << "Successfully moved to Position B.\n";
+    // Move to Position B
+    move_group_interface.setPoseTarget(target_pose_b);
+    moveit::planning_interface::MoveGroupInterface::Plan plan_to_b;
+    bool success_b = (move_group_interface.plan(plan_to_b) == moveit::planning_interface::MoveItErrorCode::SUCCESS);
+    if (success_b) {
+        move_group_interface.move();
+        std::cout << "Moved to Position B successfully.\n";
     } else {
-        RCLCPP_ERROR(logger, "Failed to compute Cartesian path.");
+        RCLCPP_ERROR(logger, "Failed to move to Position B.");
+        return 1;
     }
-
-    // Clear path constraints after motion
-    move_group_interface.clearPathConstraints();
 
     // Shutdown ROS
     rclcpp::shutdown();
