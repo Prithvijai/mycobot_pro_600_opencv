@@ -13,6 +13,7 @@ Panels:
         - /TF1/Frames1
         - /TF1/Frames1/link61
         - /TF1/Frames1/link61/Position1
+        - /TF1/Frames1/link61/Orientation1
       Splitter Ratio: 0.5
     Tree Height: 456
   - Class: rviz_common/Help
@@ -279,7 +280,7 @@ Visualization Manager:
         base:
           Value: false
         env_world:
-          Value: false
+          Value: true
         link1:
           Value: false
         link2:
@@ -331,25 +332,25 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz_default_plugins/Orbit
-      Distance: 0.9596621990203857
+      Distance: 1.1105544567108154
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: 0.28105607628822327
-        Y: 0.27450281381607056
-        Z: 0.2612481117248535
+        X: 0.18865546584129333
+        Y: -0.04668935388326645
+        Z: 0.34225893020629883
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 1.4047964811325073
+      Pitch: 0.7547975182533264
       Target Frame: base
       Value: Orbit (rviz_default_plugins)
-      Yaw: 4.700189590454102
+      Yaw: 1.3983978033065796
     Saved: ~
 Window Geometry:
   Displays:
