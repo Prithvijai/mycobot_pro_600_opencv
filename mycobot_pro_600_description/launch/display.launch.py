@@ -12,11 +12,11 @@ from ament_index_python.packages import get_package_share_directory
 
 
 def generate_launch_description():
-    share_dir = get_package_share_directory('mycobot_pro_600_desp')
+    share_dir = get_package_share_directory('mycobot_pro_600_description')
     model_launch_arg = DeclareLaunchArgument(
         name="model",
         default_value=os.path.join(
-            get_package_share_path("mycobot_pro_600_desp"),
+            get_package_share_path("mycobot_pro_600_description"),
             "urdf/mycobot_pro_600.urdf"
         )
     )

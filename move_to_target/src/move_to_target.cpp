@@ -1,81 +1,83 @@
+#include <memory>
+#include <iostream>
 #include <rclcpp/rclcpp.hpp>
 #include <moveit/move_group_interface/move_group_interface.h>
-#include <geometry_msgs/msg/pose.hpp>
-#include <tf2/LinearMath/Quaternion.h>  // For RPY to quaternion conversion
-#include <iostream>
-#include <string>
+#include <geometry_msgs/msg/pose_stamped.hpp>
+#include <chrono>  // For sleep functionality
 
-int main(int argc, char* argv[])
+int main(int argc, char *argv[])
 {
-    // Initialize ROS 2
+    // Initialize ROS and create the Node
     rclcpp::init(argc, argv);
-    auto node = rclcpp::Node::make_shared("interactive_move_to_pose_rpy");
-    auto const logger = rclcpp::get_logger("interactive_move_to_pose_rpy");
+    auto const node = std::make_shared<rclcpp::Node>(
+        "robot_direct_planner",
+        rclcpp::NodeOptions().automatically_declare_parameters_from_overrides(true)
+    );
 
-    // Set up MoveGroupInterface for the robot arm
-    static const std::string PLANNING_GROUP = "cobot_arm";  // Replace with your planning group
-    moveit::planning_interface::MoveGroupInterface move_group(node, PLANNING_GROUP);
+    auto const logger = rclcpp::get_logger("robot_direct_planner");
 
-    RCLCPP_INFO(logger, "Planning frame: %s", move_group.getPlanningFrame().c_str());
-    RCLCPP_INFO(logger, "End-effector link: %s", move_group.getEndEffectorLink().c_str());
+    // Define MoveGroup interface for controlling the robot
+    using moveit::planning_interface::MoveGroupInterface;
+    auto move_group_interface = MoveGroupInterface(node, "mycobot_pro_600_arm");
 
-    while (rclcpp::ok()) {
-        // Read target position and orientation from user
-        double x, y, z, roll, pitch, yaw;
-        std::cout << "Enter target position (x, y, z) and orientation (roll, pitch, yaw in radians), or type 'exit' to quit:\n";
+    // Set the planning frame to 'base' 
+    move_group_interface.setPoseReferenceFrame("base");
 
-        std::string input;
-        std::cin >> input;
+    move_group_interface.setStartStateToCurrentState();
 
-        if (input == "exit") {
-            std::cout << "Exiting program.\n";
-            break;
-        }
+    // Wait for the robot to be ready and set the planning time
+    move_group_interface.setPlanningTime(20.0);
 
-        try {
-            x = std::stod(input);
-            std::cin >> y >> z >> roll >> pitch >> yaw;
-        } catch (const std::exception& e) {
-            std::cout << "Invalid input. Please enter valid numbers for x, y, z, roll, pitch, yaw or type 'exit' to quit.\n";
-            continue;
-        }
+    // Set Position A based on user input
+    geometry_msgs::msg::PoseStamped target_pose_a;
+    target_pose_a.header.frame_id = "base";  // Specify the frame as 'base'
+    std::cout << "Enter coordinates for Position A (x y z Orientation x y z w): ";
+    std::cin >> target_pose_a.pose.position.x >> target_pose_a.pose.position.y >> target_pose_a.pose.position.z
+             >> target_pose_a.pose.orientation.x >> target_pose_a.pose.orientation.y >> target_pose_a.pose.orientation.z >> target_pose_a.pose.orientation.w;
 
-        // Convert RPY to quaternion
-        tf2::Quaternion quaternion;
-        quaternion.setRPY(roll, pitch, yaw);
-
-        // Set target pose
-        geometry_msgs::msg::Pose target_pose;
-        target_pose.position.x = x;
-        target_pose.position.y = y;
-        target_pose.position.z = z;
-        target_pose.orientation.x = quaternion.x();
-        target_pose.orientation.y = quaternion.y();
-        target_pose.orientation.z = quaternion.z();
-        target_pose.orientation.w = quaternion.w();
-
-        move_group.setPoseTarget(target_pose);
-
-        // Plan and execute the motion
-        moveit::planning_interface::MoveGroupInterface::Plan plan;
-        bool success = (move_group.plan(plan) == moveit::core::MoveItErrorCode::SUCCESS);
-
-        if (success) {
-            RCLCPP_INFO(logger, "Plan successful. Executing...");
-            move_group.execute(plan);
-            std::cout << "Successfully moved to position (" << x << ", " << y << ", " << z 
-                      << ") with orientation (roll: " << roll << ", pitch: " << pitch << ", yaw: " << yaw << ")\n";
-        } else {
-            RCLCPP_WARN(logger, "Planning to target pose failed!");
-            std::cout << "Failed to move to position (" << x << ", " << y << ", " << z 
-                      << ") with orientation (roll: " << roll << ", pitch: " << pitch << ", yaw: " << yaw << ")\n";
-        }
-
-        // Wait briefly before the next iteration
-        rclcpp::sleep_for(std::chrono::milliseconds(500));
+    // Move to Position A
+    move_group_interface.setPoseTarget(target_pose_a);
+    moveit::planning_interface::MoveGroupInterface::Plan plan_to_a;
+    bool success_a = (move_group_interface.plan(plan_to_a) == moveit::planning_interface::MoveItErrorCode::SUCCESS);
+    if (success_a) {
+        move_group_interface.move();
+        std::cout << "Moved to Position A successfully.\n";
+    } else {
+        RCLCPP_ERROR(logger, "Failed to move to Position A.");
+        return 1;
     }
 
-    // Shutdown ROS 2
+    // Wait for a few seconds at Position A
+    std::cout << "Waiting for 5 seconds at Position A...\n";
+    auto joint_values = move_group_interface.getCurrentJointValues();
+    std::cout << "Current Joint Values: ";
+    // Printing joint values of the Robot at Position A
+    for (const auto &value : joint_values) {
+        std::cout << value << " ";
+    }
+    std::cout << std::endl;
+    rclcpp::sleep_for(std::chrono::seconds(5));  // Sleep for 5 seconds
+
+    // Set Position B based on user input
+    geometry_msgs::msg::PoseStamped target_pose_b;
+    target_pose_b.header.frame_id = "base";
+    std::cout << "Enter coordinates for Position B (x y z Orientation x y z w): ";
+    std::cin >> target_pose_b.pose.position.x >> target_pose_b.pose.position.y >> target_pose_b.pose.position.z
+             >> target_pose_b.pose.orientation.x >> target_pose_b.pose.orientation.y >> target_pose_b.pose.orientation.z >> target_pose_b.pose.orientation.w;
+
+    // Move to Position B
+    move_group_interface.setPoseTarget(target_pose_b);
+    moveit::planning_interface::MoveGroupInterface::Plan plan_to_b;
+    bool success_b = (move_group_interface.plan(plan_to_b) == moveit::planning_interface::MoveItErrorCode::SUCCESS);
+    if (success_b) {
+        move_group_interface.move();
+        std::cout << "Moved to Position B successfully.\n";
+    } else {
+        RCLCPP_ERROR(logger, "Failed to move to Position B.");
+        return 1;
+    }
+
+    // Shutdown ROS
     rclcpp::shutdown();
     return 0;
 }

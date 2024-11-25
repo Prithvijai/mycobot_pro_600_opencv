@@ -34,14 +34,7 @@ install(PROGRAMS
   src/pose_estimation.py
   DESTINATION lib/${PROJECT_NAME}
 )
-install(PROGRAMS
-  src/pose_estimation2.py
-  DESTINATION lib/${PROJECT_NAME}
-)
-install(PROGRAMS
-  src/pose_estimation3.py
-  DESTINATION lib/${PROJECT_NAME}
-)
+
 install(PROGRAMS
   src/calibration_chessboard.yaml
   DESTINATION lib/${PROJECT_NAME}

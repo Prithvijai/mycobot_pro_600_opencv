@@ -1,12 +1,12 @@
 <?xml version="1.0"?>
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
-  <name>mycobot_600_moveit_config</name>
+  <name>mycobot_pro_600_moveit_config</name>
   <version>0.3.0</version>
   <description>
      An automatically generated package with all the configuration and launch files for using the mycobot_600 with the MoveIt Motion Planning Framework
   </description>
-  <maintainer email="prithvijai0510@gmail.com">Prithvijai</maintainer>
+  <maintainer email="rakshith@rakshith.com">rakshith</maintainer>
 
   <license>BSD</license>
 
@@ -14,7 +14,7 @@
   <url type="bugtracker">https://github.com/ros-planning/moveit2/issues</url>
   <url type="repository">https://github.com/ros-planning/moveit2</url>
 
-  <author email="prithvijai0510@gmail.com">Prithvijai</author>
+  <author email="rakshith@rakshith.com">rakshith</author>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
 
@@ -36,7 +36,7 @@
   <exec_depend>moveit_ros_visualization</exec_depend>
   <exec_depend>moveit_ros_warehouse</exec_depend>
   <exec_depend>moveit_setup_assistant</exec_depend>
-  <exec_depend>mycobot_pro_600_desp</exec_depend>
+  <exec_depend>mycobot_pro_600_description</exec_depend>
   <exec_depend>robot_state_publisher</exec_depend>
   <exec_depend>rviz2</exec_depend>
   <exec_depend>rviz_common</exec_depend>

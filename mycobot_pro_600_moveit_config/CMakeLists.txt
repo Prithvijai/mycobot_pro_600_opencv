@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22)
-project(mycobot_600_moveit_config)
+project(mycobot_pro_600_moveit_config)
 
 find_package(ament_cmake REQUIRED)
 

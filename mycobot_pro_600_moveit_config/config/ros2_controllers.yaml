@@ -3,14 +3,14 @@ controller_manager:
   ros__parameters:
     update_rate: 100  # Hz
 
-    cobot_arm_controller:
+    mycobot_pro_600_arm_controller:
       type: joint_trajectory_controller/JointTrajectoryController
 
 
     joint_state_broadcaster:
       type: joint_state_broadcaster/JointStateBroadcaster
 
-cobot_arm_controller:
+mycobot_pro_600_arm_controller:
   ros__parameters:
     joints:
       - joint2_to_joint1

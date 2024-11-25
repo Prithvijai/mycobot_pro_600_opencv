@@ -3,11 +3,10 @@
     <xacro:arg name="initial_positions_file" default="initial_positions.yaml" />
 
     <!-- Import mycobot_600 urdf file -->
-    <xacro:include filename="$(find mycobot_pro_600_desp)/urdf/mycobot_pro_600.urdf" />
+    <xacro:include filename="$(find mycobot_pro_600_description)/urdf/mycobot_pro_600.urdf" />
 
     <!-- Import control_xacro -->
     <xacro:include filename="mycobot_600.ros2_control.xacro" />
-
 
     <xacro:mycobot_600_ros2_control name="FakeSystem" initial_positions_file="$(arg initial_positions_file)"/>
 

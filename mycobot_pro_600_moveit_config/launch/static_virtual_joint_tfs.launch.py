@@ -3,5 +3,5 @@ from moveit_configs_utils.launches import generate_static_virtual_joint_tfs_laun
 
 
 def generate_launch_description():
-    moveit_config = MoveItConfigsBuilder("mycobot_600", package_name="mycobot_600_moveit_config").to_moveit_configs()
+    moveit_config = MoveItConfigsBuilder("mycobot_600", package_name="mycobot_pro_600_moveit_config").to_moveit_configs()
     return generate_static_virtual_joint_tfs_launch(moveit_config)
