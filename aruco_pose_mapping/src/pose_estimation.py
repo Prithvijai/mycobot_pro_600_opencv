@@ -1,81 +1,106 @@
 import cv2
-import os
 import numpy as np
-import cv2.aruco as aruco
 
-# Create a directory for saving pose images if it doesn't exist
-pose_images_dir = '/home/kris/mycobot_pro_600_ws/src/aruco_ros/scripts/pose_images'
-if not os.path.exists(pose_images_dir):
-    os.makedirs(pose_images_dir)
+aruco_marker_side_length = 0.025
 
-# Initialize a counter for image numbering
-image_counter = 1
+camera_calibration_parameters_filename = 'calibration_chessboard.yaml'
 
-# Camera matrix and distortion coefficients (replace these with your calibration values)
-camera_matrix = np.array([[1.0, 0, 0], [0, 1.0, 0], [0, 0, 1.0]])  # Example values
-dist_coeffs = np.zeros((4, 1))  # Example values
 
-# Camera settings
-cap = cv2.VideoCapture(0)  # Adjust the index based on your camera
+def draw_axes(frame, mtx, dst, rvec, tvec, length=0.1):
+    """
+    Draw axes on the frame given rotation and translation vectors.
+    :param frame: Image on which to draw
+    :param mtx: Camera matrix
+    :param dst: Distortion coefficients
+    :param rvec: Rotation vector
+    :param tvec: Translation vector
+    :param length: Length of the axis to draw
+    """
+    axis_points = np.float32([[length, 0, 0], [0, length, 0], [0, 0, length]]).reshape(-1, 3)
+    image_points, _ = cv2.projectPoints(axis_points, rvec, tvec, mtx, dst)
 
-# ArUco marker parameters
-aruco_dict = aruco.Dictionary_get(aruco.DICT_6X6_250)
-parameters = aruco.DetectorParameters_create()
+    origin = tuple(map(int, image_points[0].ravel()))
+    x_axis = tuple(map(int, image_points[1].ravel()))
+    y_axis = tuple(map(int, image_points[2].ravel()))
+    z_axis = tuple(map(int, image_points[2].ravel()))
 
-# Desired width and height for the output feed
-desired_width = 640
-desired_height = 480
+    cv2.line(frame, origin, x_axis, (0, 0, 255), 5)  # Red for x-axis
+    cv2.line(frame, origin, y_axis, (0, 255, 0), 5)  # Green for y-axis
+    cv2.line(frame, origin, z_axis, (255, 0, 0), 5)  # Blue for z-axis
 
-while True:
-    # Read a frame from the video feed
-    ret, frame = cap.read()
-    if not ret:
-        print("Failed to capture image")
-        break
 
-    # Resize the frame
-    frame = cv2.resize(frame, (desired_width, desired_height))
+# Load camera calibration parameters
+cv_file = cv2.FileStorage(camera_calibration_parameters_filename, cv2.FILE_STORAGE_READ)
+mtx = cv_file.getNode('K').mat()
+dst = cv_file.getNode('D').mat()
+cv_file.release()
 
-    # Convert the frame to grayscale for marker detection
-    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+# Load the ArUco dictionary
+print(f"[INFO] Detecting markers...")
+this_aruco_dictionary = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_6X6_250)
 
-    # Detect markers in the frame
-    corners, ids, rejectedImgPoints = aruco.detectMarkers(gray, aruco_dict, parameters=parameters)
 
-    # Draw the detected markers
-    aruco.drawDetectedMarkers(frame, corners, ids)
+# Start the video stream
+cap = cv2.VideoCapture(4)
 
-    # Display the frame with markers
-    cv2.imshow('Video Feed', frame)
+if not cap.isOpened():
+    print("[ERROR] Could not open video stream!")
+    exit()
 
-    # Wait for key press
-    key = cv2.waitKey(1) & 0xFF
+# Capture a single frame
+ret, frame = cap.read()
 
-    # If 's' is pressed, capture the image and save
-    if key == ord('s'):
-        # Create a filename with the current counter value
-        image_filename = os.path.join(pose_images_dir, f'image{image_counter}.jpg')
-        cv2.imwrite(image_filename, frame)
-        print(f"Image saved as {image_filename}")
+if not ret:
+    print("[ERROR] Could not capture a frame!")
+    cap.release()
+    exit()
 
-        # Check for markers again in the current frame for pose estimation
-        if ids is not None:
-            for marker_id, corner in zip(ids.flatten(), corners):
-                rvec, tvec, _ = aruco.estimatePoseSingleMarkers(corner, 0.1, camera_matrix, dist_coeffs)
 
-                # Output pose estimation
-                position = tvec[0].flatten()
-                orientation = rvec[0].flatten()
+# Detect ArUco markers in the image
+corners, marker_ids, rejected = cv2.aruco.detectMarkers(
+    frame, this_aruco_dictionary )
 
-                # Print pose estimates in the terminal for this saved image
-                print(f"Marker ID: {marker_id}, Position: {position}, Orientation: {orientation}")
+if marker_ids is not None:
+    cv2.aruco.drawDetectedMarkers(frame, corners, marker_ids)
 
-        image_counter += 1  # Increment the counter
+    # Get the pose of the markers
+    rvecs, tvecs, _ = cv2.aruco.estimatePoseSingleMarkers(
+        corners, aruco_marker_side_length, mtx, dst)
+    
 
-    # If 'q' is pressed, exit the loop
-    if key == ord('q'):
-        break
+    for i, marker_id in enumerate(marker_ids):
+        transform_translation_x = tvecs[i][0][0]
+        transform_translation_y = tvecs[i][0][1]
+        transform_translation_z = tvecs[i][0][2]
 
-# Release resources
+        mapped_positions0 = []
+
+        mapped_x = -0.15-0.1651+transform_translation_y
+        mapped_y = -0.25-transform_translation_x
+
+        mapped_positions0.append([mapped_x, mapped_y])
+        print("mapped positions_0:\n" ,mapped_positions0)
+
+        '''
+
+        mapped_positions1 = []
+
+        mapped_x1 = -0.1651+transform_translation_y
+        mapped_y1 = -transform_translation_x
+
+        mapped_positions1.append([mapped_x1, mapped_y1])
+        print("mapped positions_1:\n" ,mapped_positions1)
+
+         '''
+
+
+        draw_axes(frame, mtx, dst, rvecs[i], tvecs[i], 0.05)
+
+else:
+    print("[INFO] No markers detected in the captured frame.")
+
+cv2.imshow('Captured Frame', frame)
+cv2.waitKey(0)
+
 cap.release()
 cv2.destroyAllWindows()

@@ -1,6 +1,6 @@
 import cv2
 
-cap = cv2.VideoCapture(0)  # Change index to 0 or 1 if needed
+cap = cv2.VideoCapture(4)  # Change index to 0 or 1 if needed
 
 if not cap.isOpened():
     print("Error: Could not open video.")
@@ -25,7 +25,7 @@ while True:
     if k == 27:  # Escape key to exit
         break
     elif k == ord('s'):  # 's' key to save the image
-        cv2.imwrite('/home/kris/mycobot_pro_600_ws/src/aruco_ros/scripts/images/img' + str(num) + '.png', img)
+        cv2.imwrite('/home/kris/mycobot_pro_600_ws/src/aruco_pose_mapping/images/img' + str(num) + '.png', img)
         print("Image saved!")
         num += 1
 
