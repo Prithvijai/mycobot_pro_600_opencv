@@ -20,8 +20,8 @@ int main(int argc, char *argv[])
     using moveit::planning_interface::MoveGroupInterface;
     auto move_group_interface = MoveGroupInterface(node, "mycobot_pro_600_arm");
 
-    // Set the planning frame to 'base' 
-    move_group_interface.setPoseReferenceFrame("base");
+    // Set the planning frame to 'env_world' 
+    move_group_interface.setPoseReferenceFrame("env_world");
 
     move_group_interface.setStartStateToCurrentState();
 
@@ -30,14 +30,11 @@ int main(int argc, char *argv[])
 
     // Set Position A based on user input
     geometry_msgs::msg::PoseStamped target_pose_a;
-    target_pose_a.header.frame_id = "base";  // Specify the frame as 'base'
-    std::cout << "Enter coordinates for Position A (x y): ";
-    std::cin >> target_pose_a.pose.position.x >> target_pose_a.pose.position.y;
-    target_pose_a.pose.position.z = 0.089561;
-    target_pose_a.pose.orientation.x = 0.48482;
-    target_pose_a.pose.orientation.y = -0.51012;
-    target_pose_a.pose.orientation.z = 0.49725;
-    target_pose_a.pose.orientation.w = 0.50742;
+    target_pose_a.header.frame_id = "env_world";  // Specify the frame as 'env_world'
+    std::cout << "Enter coordinates for Position A (x y z Orientation x y z w): ";
+    std::cin >> target_pose_a.pose.position.x >> target_pose_a.pose.position.y >> target_pose_a.pose.position.z
+             >> target_pose_a.pose.orientation.x >> target_pose_a.pose.orientation.y >> target_pose_a.pose.orientation.z >> target_pose_a.pose.orientation.w;
+
     // Move to Position A
     move_group_interface.setPoseTarget(target_pose_a);
     moveit::planning_interface::MoveGroupInterface::Plan plan_to_a;
@@ -45,13 +42,6 @@ int main(int argc, char *argv[])
     if (success_a) {
         move_group_interface.move();
         std::cout << "Moved to Position A successfully.\n";
-        auto joint_values = move_group_interface.getCurrentJointValues();
-        std::cout << "Current Joint Values: ";
-        // Printing joint values of the Robot at Position A
-        for (const auto &value : joint_values) {
-            std::cout << value << " ";
-        }
-    std::cout << std::endl;
     } else {
         RCLCPP_ERROR(logger, "Failed to move to Position A.");
         return 1;
@@ -59,17 +49,22 @@ int main(int argc, char *argv[])
 
     // Wait for a few seconds at Position A
     std::cout << "Waiting for 5 seconds at Position A...\n";
+    auto joint_values = move_group_interface.getCurrentJointValues();
+    std::cout << "Current Joint Values: ";
+    // Printing joint values of the Robot at Position A
+    for (const auto &value : joint_values) {
+        std::cout << value << " ";
+    }
+    std::cout << std::endl;
     rclcpp::sleep_for(std::chrono::seconds(5));  // Sleep for 5 seconds
 
     // Set Position B based on user input
     geometry_msgs::msg::PoseStamped target_pose_b;
-    target_pose_b.header.frame_id = "base";
-    std::cout << "Enter coordinates for Position B (x y): ";
-    std::cin >> target_pose_b.pose.position.x >> target_pose_b.pose.position.y;target_pose_b.pose.position.z = 0.089561;
-    target_pose_b.pose.orientation.x = 0.48482;
-    target_pose_b.pose.orientation.y = -0.51012;
-    target_pose_b.pose.orientation.z = 0.49725;
-    target_pose_b.pose.orientation.w = 0.50742;
+    target_pose_b.header.frame_id = "env_world";
+    std::cout << "Enter coordinates for Position B (x y z Orientation x y z w): ";
+    std::cin >> target_pose_b.pose.position.x >> target_pose_b.pose.position.y >> target_pose_b.pose.position.z
+             >> target_pose_b.pose.orientation.x >> target_pose_b.pose.orientation.y >> target_pose_b.pose.orientation.z >> target_pose_b.pose.orientation.w;
+
     // Move to Position B
     move_group_interface.setPoseTarget(target_pose_b);
     moveit::planning_interface::MoveGroupInterface::Plan plan_to_b;

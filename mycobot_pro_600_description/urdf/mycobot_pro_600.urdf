@@ -138,6 +138,12 @@
       <!-- <origin xyz = "0 0 -0.02 " rpy = "1.5708 0 -1.5708"/> -->
       <origin xyz = "-0.16 0 -0.02" rpy = "0 0 0"/>
     </visual>
+    <collision>
+     <geometry>
+       <cylinder length="0.01" radius="0.5"/>
+      </geometry>
+    <origin xyz = "-0.16 0 -0.02" rpy = "0 0 0"/>
+    </collision>
   </link>
 
   <joint name="env_world_fixed_joint" type="fixed">
@@ -200,7 +206,7 @@
     <axis xyz="-1 0 0"/>
     <parent link="link6"/>
     <child link="endEffector"/>
-    <origin xyz= "-0.07586 0 0" rpy = "-1.57080 0 0 "/>
+    <origin xyz= "0 0 0" rpy = "-1.57080 0 0 "/>
   </joint>
  
  <link name="endEffector"/>
