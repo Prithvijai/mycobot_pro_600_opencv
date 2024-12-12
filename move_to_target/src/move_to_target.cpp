@@ -20,8 +20,8 @@ int main(int argc, char *argv[])
     using moveit::planning_interface::MoveGroupInterface;
     auto move_group_interface = MoveGroupInterface(node, "mycobot_pro_600_arm");
 
-    // Set the planning frame to 'env_world' 
-    move_group_interface.setPoseReferenceFrame("env_world");
+    // Set the planning frame to 'base' 
+    move_group_interface.setPoseReferenceFrame("base");
 
     move_group_interface.setStartStateToCurrentState();
 
@@ -30,7 +30,7 @@ int main(int argc, char *argv[])
 
     // Set Position A based on user input
     geometry_msgs::msg::PoseStamped target_pose_a;
-    target_pose_a.header.frame_id = "env_world";  // Specify the frame as 'env_world'
+    target_pose_a.header.frame_id = "base";  // Specify the frame as 'base'
     std::cout << "Enter coordinates for Position A (x y z Orientation x y z w): ";
     std::cin >> target_pose_a.pose.position.x >> target_pose_a.pose.position.y >> target_pose_a.pose.position.z
              >> target_pose_a.pose.orientation.x >> target_pose_a.pose.orientation.y >> target_pose_a.pose.orientation.z >> target_pose_a.pose.orientation.w;
@@ -60,7 +60,7 @@ int main(int argc, char *argv[])
 
     // Set Position B based on user input
     geometry_msgs::msg::PoseStamped target_pose_b;
-    target_pose_b.header.frame_id = "env_world";
+    target_pose_b.header.frame_id = "base";
     std::cout << "Enter coordinates for Position B (x y z Orientation x y z w): ";
     std::cin >> target_pose_b.pose.position.x >> target_pose_b.pose.position.y >> target_pose_b.pose.position.z
              >> target_pose_b.pose.orientation.x >> target_pose_b.pose.orientation.y >> target_pose_b.pose.orientation.z >> target_pose_b.pose.orientation.w;

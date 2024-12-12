@@ -149,7 +149,7 @@
   <joint name="env_world_fixed_joint" type="fixed">
     <parent link="base"/>
     <child link="env_world"/>
-    <origin xyz="-0.4 -0.0 0" rpy="0 0 0"/> <!-- Adjust position as needed -->
+    <origin xyz="-0.15 -0.25 0" rpy="0 0 0"/> <!-- Adjust position as needed -->
   </joint>
 
     <joint name="joint2_to_joint1" type="revolute">
