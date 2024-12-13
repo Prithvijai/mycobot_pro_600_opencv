@@ -84,8 +84,8 @@ int main(int argc, char *argv[]) {
 
     move_group_interface.setStartStateToCurrentState();
 
-    // Wait for the robot to be ready and set the planning time
     move_group_interface.setPlanningTime(20.0);
+    // Define boundaries for the robot's workspace
 
     for (const auto &waypoint : waypoints) {
         // Convert roll, pitch, yaw to quaternion
@@ -117,12 +117,13 @@ int main(int argc, char *argv[]) {
             msg.data = true;
             publisher->publish(msg);
         } else {
-            RCLCPP_ERROR(logger, "Failed to move to waypoint (%f, %f, %f)", waypoint.x, waypoint.y, waypoint.z);
+            RCLCPP_ERROR(logger, "Failed to move to waypoint (%f, %f, %f). Stopping execution.", waypoint.x, waypoint.y, waypoint.z);
+            break; // Exit the loop on failure
         }
 
         // Wait for 5 seconds between movements
-        std::cout << "Waiting for 5 seconds...\n";
-        rclcpp::sleep_for(std::chrono::seconds(5));
+        std::cout << "Waiting for 1 seconds...\n";
+        rclcpp::sleep_for(std::chrono::seconds(1));
     }
 
     // Shutdown ROS
